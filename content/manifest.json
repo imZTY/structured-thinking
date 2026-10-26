@@ -1,0 +1,8 @@
+{
+  "standard": 1,
+  "title": "structured-thinking",
+  "topics": [
+    { "id": "stability-governance", "title": "稳定性治理", "path": "topics/stability-governance/topic.json" },
+    { "id": "ai-knowledge-base", "title": "AI 知识库", "path": "topics/ai-knowledge-base/topic.json" }
+  ]
+}
