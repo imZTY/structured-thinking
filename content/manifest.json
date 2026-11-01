@@ -2,7 +2,25 @@
   "standard": 1,
   "title": "structured-thinking",
   "topics": [
-    { "id": "stability-governance", "title": "稳定性治理", "path": "topics/stability-governance/topic.json" },
-    { "id": "ai-knowledge-base", "title": "AI 知识库", "path": "topics/ai-knowledge-base/topic.json" }
+    {
+      "id": "stability-governance",
+      "title": "稳定性治理",
+      "path": "topics/stability-governance/topic.json"
+    },
+    {
+      "id": "ai-knowledge-base",
+      "title": "AI 知识库",
+      "path": "topics/ai-knowledge-base/topic.json"
+    },
+    {
+      "id": "ai-code-review",
+      "title": "AI 代码审查",
+      "path": "topics/ai-code-review/topic.json"
+    },
+    {
+      "id": "book-publishing",
+      "title": "书籍出版",
+      "path": "topics/book-publishing/topic.json"
+    }
   ]
 }
