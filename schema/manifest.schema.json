@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "structured-thinking/manifest.schema.json",
+  "title": "structured-thinking content manifest",
+  "type": "object",
+  "required": ["standard", "title", "topics"],
+  "additionalProperties": false,
+  "properties": {
+    "standard": { "const": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "topics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+            "description": "主题 id，kebab-case，与目录名一致"
+          },
+          "title": { "type": "string", "minLength": 1 },
+          "path": {
+            "type": "string",
+            "pattern": "^topics/[a-z0-9_-]+/topic\\.json$",
+            "description": "相对 content/ 的路径"
+          },
+          "order": { "type": "number" }
+        }
+      }
+    }
+  }
+}

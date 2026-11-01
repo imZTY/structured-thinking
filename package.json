@@ -1,0 +1,22 @@
+{
+  "name": "structured-thinking",
+  "version": "0.1.0",
+  "description": "轻量、简洁、可拓展的结构化思维导图渲染框架 —— 内容即 JSON，标准由本项目定义",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "validate": "node scripts/validate-content.mjs",
+    "dev": "npm --prefix web run dev",
+    "build": "npm --prefix web run build",
+    "preview": "npm --prefix web run preview",
+    "test": "npm --prefix web run test"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "standard": 1,
+  "id": "my-topic",
+  "title": "（你的主题名）",
+  "subtitle": "（可选：一句话副标题）",
+  "summary": "（可选：一段 **markdown** 概述，选中空白处时显示在右侧检查器）",
+  "tags": ["示例"],
+  "expandDepth": 2,
+  "meta": {
+    "provenance": { "description": "（内容来源：AI 对话 / 人工整理 / 引用出处）", "date": "2026-10" }
+  },
+  "root": {
+    "expr": "成功 = 能力 × 机会",
+    "question": "（可选：这条公式回答的本质问题）",
+    "note": "（可选：短 markdown）",
+    "details": "（可选：长 markdown，仅在检查器里显示）",
+    "terms": {
+      "能力": {
+        "expr": "能力 = 知识 + 经验",
+        "question": "（可选）",
+        "terms": {
+          "知识": {
+            "note": "（没有 expr 的词就是叶子：只是公式里的一个词，可以带说明）",
+            "actions": [
+              { "kind": "action", "text": "（行动层：挂在这个词上的抓手）", "status": "todo" },
+              { "kind": "idea", "text": "（行动层：一个想法，不需要状态）" }
+            ],
+            "links": [{ "to": "opportunity", "rel": "（可选：跨分支关联）" }]
+          }
+        }
+      },
+      "机会": {
+        "id": "opportunity",
+        "note": "（id 只在被 links 引用时才需要写）",
+        "refs": [{ "label": "（可选：参考资料名）", "url": "https://example.com" }]
+      }
+    }
+  }
+}

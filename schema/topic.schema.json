@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "structured-thinking/topic.schema.json",
+  "title": "structured-thinking topic",
+  "type": "object",
+  "required": ["standard", "id", "title", "root"],
+  "additionalProperties": false,
+  "properties": {
+    "standard": { "const": 1 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "主题 id，与目录名一致"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "subtitle": { "type": "string" },
+    "summary": { "type": "string", "description": "markdown 概述" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "expandDepth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 2,
+      "description": "初始展开的公式层数（根公式算第 1 层）"
+    },
+    "meta": { "type": "object" },
+    "root": { "$ref": "#/$defs/node" }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "一个词（term）。有 expr 表示它被展开成了自己的公式；根节点必须有 expr",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+          "description": "可选的稳定标识，仅在被 links 引用时需要；主题内唯一"
+        },
+        "expr": {
+          "type": "string",
+          "minLength": 3,
+          "description": "形如「左边 = 右边」的一行公式。非根节点的左边必须等于它在父公式里的词"
+        },
+        "question": { "type": "string", "description": "本质问题" },
+        "note": { "type": "string", "description": "短 markdown" },
+        "details": { "type": "string", "description": "长 markdown" },
+        "actions": {
+          "type": "array",
+          "description": "行动层：挂在这个词上的抓手 / 想法",
+          "items": { "$ref": "#/$defs/action" }
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label"],
+            "additionalProperties": false,
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["to"],
+            "additionalProperties": false,
+            "properties": {
+              "to": { "type": "string", "description": "目标节点的 id，主题内必须存在" },
+              "rel": { "type": "string" }
+            }
+          }
+        },
+        "meta": { "type": "object" },
+        "terms": {
+          "type": "object",
+          "description": "以词为键的子节点表；键必须出现在本节点 expr 的右边",
+          "additionalProperties": { "$ref": "#/$defs/node" }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["kind", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "开放词汇。约定：action（抓手 / 方法）| idea（想法）"
+        },
+        "text": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "description": "开放词汇。约定：todo | doing | done"
+        }
+      }
+    }
+  }
+}
