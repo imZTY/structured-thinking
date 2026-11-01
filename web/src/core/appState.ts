@@ -25,17 +25,36 @@ export interface AppState {
   expanded: Set<string>;
   /** 当前选中的词（检查器聚焦它）；null = 无选中 */
   selected: Path | null;
+  /** 被红圈圈选的词（pathKey）；纯演示标注，不写回内容 */
+  circled: Set<string>;
+  /** 被高亮标注的词（pathKey）；纯演示标注，不写回内容 */
+  highlighted: Set<string>;
   mode: Mode;
   /** 加载 / 保存的提示信息 */
   error: string | null;
   save: SaveStatus;
 }
 
+/**
+ * 画面上看得见的状态：屏幕渲染和图片导出共用这一份。
+ * 新增视图功能时把状态加进来，导出就会自动拿到。
+ */
+export type ViewState = Pick<AppState, 'expanded' | 'circled' | 'highlighted' | 'mode'>;
+
+export const viewOf = (s: AppState): ViewState => ({
+  expanded: s.expanded,
+  circled: s.circled,
+  highlighted: s.highlighted,
+  mode: s.mode,
+});
+
 export const initialAppState: AppState = {
   manifest: null,
   topic: null,
   expanded: new Set(),
   selected: null,
+  circled: new Set(),
+  highlighted: new Set(),
   mode: 'cognition',
   error: null,
   save: 'idle',
@@ -55,7 +74,7 @@ export function withTopic(state: AppState, topic: Topic, selected: Path | null):
     for (let i = 1; i < sel.length; i++) expanded.add(pathKey(sel.slice(0, i)));
     if (sel.length === 0) sel = null;
   }
-  return { ...state, topic, expanded, selected: sel, error: null, save: 'idle' };
+  return { ...state, topic, expanded, selected: sel, circled: new Set(), highlighted: new Set(), error: null, save: 'idle' };
 }
 
 export function withError(state: AppState, error: string | null): AppState {
@@ -118,6 +137,32 @@ export function collapseAll(state: AppState): AppState {
   return { ...state, expanded: new Set() };
 }
 
+/** 切换一个词的红圈；路径无效时不动 */
+export function toggleCircle(state: AppState, path: Path): AppState {
+  if (!state.topic || !isValidPath(state.topic.root, path)) return state;
+  const key = pathKey(path);
+  const circled = new Set(state.circled);
+  if (!circled.delete(key)) circled.add(key);
+  return { ...state, circled };
+}
+
+/** 切换一个词的高亮；路径无效时不动 */
+export function toggleHighlight(state: AppState, path: Path): AppState {
+  if (!state.topic || !isValidPath(state.topic.root, path)) return state;
+  const key = pathKey(path);
+  const highlighted = new Set(state.highlighted);
+  if (!highlighted.delete(key)) highlighted.add(key);
+  return { ...state, highlighted };
+}
+
+export function clearCircles(state: AppState): AppState {
+  return state.circled.size ? { ...state, circled: new Set() } : state;
+}
+
+export function clearHighlights(state: AppState): AppState {
+  return state.highlighted.size ? { ...state, highlighted: new Set() } : state;
+}
+
 /**
  * 把一次编辑结果落到状态上：换根、改名时重映射展开 / 选中路径、清掉已失效的路径。
  * 失败的编辑（ok=false）原样返回，由调用方展示 error。
@@ -126,6 +171,8 @@ export function applyEdit(state: AppState, res: EditResult): AppState {
   if (!state.topic || !res.ok) return state;
   const root = res.root;
   let expanded = state.expanded;
+  let circled = state.circled;
+  let highlighted = state.highlighted;
   let selected = state.selected;
 
   if (res.renamed) {
@@ -135,7 +182,10 @@ export function applyEdit(state: AppState, res: EditResult): AppState {
       p.length >= prefix.length && prefix.every((k, i) => p[i] === k)
         ? [...parent, to, ...p.slice(prefix.length)]
         : p;
-    expanded = new Set([...expanded].map((k) => pathKey(remap(keyToPath(k)))));
+    const remapKeys = (keys: Set<string>) => new Set([...keys].map((k) => pathKey(remap(keyToPath(k)))));
+    expanded = remapKeys(expanded);
+    circled = remapKeys(circled);
+    highlighted = remapKeys(highlighted);
     if (selected) selected = remap(selected);
   }
 
@@ -144,10 +194,21 @@ export function applyEdit(state: AppState, res: EditResult): AppState {
     const p = keyToPath(k);
     if (isValidPath(root, p) && getNode(root, p)?.expr) kept.add(k);
   }
+  const keptCircled = new Set<string>();
+  for (const k of circled) if (isValidPath(root, keyToPath(k))) keptCircled.add(k);
+  const keptHighlighted = new Set<string>();
+  for (const k of highlighted) if (isValidPath(root, keyToPath(k))) keptHighlighted.add(k);
   // [] = 根被选中，始终有效；其余取最长合法前缀，一个都不剩就取消选中
   if (selected && selected.length) {
     selected = resolvePath(root, selected);
     if (selected.length === 0) selected = null;
   }
-  return { ...state, topic: { ...state.topic, root }, expanded: kept, selected };
+  return {
+    ...state,
+    topic: { ...state.topic, root },
+    expanded: kept,
+    circled: keptCircled,
+    highlighted: keptHighlighted,
+    selected,
+  };
 }

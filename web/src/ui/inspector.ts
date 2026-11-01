@@ -16,8 +16,14 @@ export interface InspectorCtx {
   mode: Mode;
   /** 本地 dev 服务在场（可写回） */
   editable: boolean;
+  /** 选中的词是否被红圈圈选 */
+  circled: boolean;
+  /** 选中的词是否被高亮标注 */
+  highlighted: boolean;
   on: {
     select(path: Path | null): void;
+    toggleCircle(path: Path): void;
+    toggleHighlight(path: Path): void;
     jump(path: Path): void;
     expandAsFormula(path: Path): void;
     removeFormula(path: Path): void;
@@ -68,6 +74,8 @@ export function renderInspector(ctx: InspectorCtx): HTMLElement {
   } else {
     box.appendChild(el('h2', 'insp__title', labelOf(ctx.topic, path)));
   }
+
+  box.appendChild(tools(ctx, path));
 
   // 公式状态
   if (node?.expr) {
@@ -181,6 +189,29 @@ function crumbs(ctx: InspectorCtx, path: Path): HTMLElement {
     else nav.appendChild(btn('insp__crumb-item', labelOf(ctx.topic, p), undefined, () => ctx.on.select(p)));
   });
   return nav;
+}
+
+/** 选中词的通用操作：两种模式下都可用，只影响画面不改内容。后续的演示 / 标注类操作往这一行加按钮 */
+function tools(ctx: InspectorCtx, path: Path): HTMLElement {
+  const row = el('div', 'insp__tools');
+  row.appendChild(el('span', 'insp__tools-label', '标注'));
+  const circle = btn(
+    'btn btn--tool' + (ctx.circled ? ' btn--on' : ''),
+    ctx.circled ? '◯ 取消圈选' : '◯ 圈选',
+    '用红圈标出它；已展开下层时一并圈住。导出图片会带上',
+    () => ctx.on.toggleCircle(path),
+  );
+  circle.setAttribute('aria-pressed', String(ctx.circled));
+  row.appendChild(circle);
+  const highlight = btn(
+    'btn btn--tool btn--tool-hl' + (ctx.highlighted ? ' btn--on btn--on-hl' : ''),
+    ctx.highlighted ? '▮ 取消高亮' : '▮ 高亮',
+    '用暖色底突出显示它。导出图片会带上',
+    () => ctx.on.toggleHighlight(path),
+  );
+  highlight.setAttribute('aria-pressed', String(ctx.highlighted));
+  row.appendChild(highlight);
+  return row;
 }
 
 function readonlyText(node: TermNode | undefined): HTMLElement {

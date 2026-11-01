@@ -264,6 +264,50 @@ describe('appState', () => {
     expect(getNode(s1.topic!.root, ['b'])?.expr).toBe('b =');
     expect(s1.expanded.has(pathKey(['b']))).toBe(true);
   });
+
+  it('toggleCircle 切换红圈，无效路径不动，clearCircles 清空', () => {
+    let s = S.withTopic(S.initialAppState, mkTopic(mkRoot()), null);
+    s = S.toggleCircle(s, ['a']);
+    expect(s.circled.has(pathKey(['a']))).toBe(true);
+    expect(S.toggleCircle(s, ['zzz'])).toBe(s);
+    s = S.toggleCircle(s, ['a']);
+    expect(s.circled.size).toBe(0);
+    s = S.clearCircles(S.toggleCircle(s, ['a', 'x']));
+    expect(s.circled.size).toBe(0);
+  });
+
+  it('红圈随改名重映射，词被删后不再保留，切主题时清空', () => {
+    let s = S.withTopic(S.initialAppState, mkTopic(mkRoot()), null);
+    s = S.toggleCircle(s, ['a', 'x']);
+    const renamed = S.applyEdit(s, setRhs(s.topic!.root, [], 'a2 + b'));
+    expect(renamed.circled.has(pathKey(['a2', 'x']))).toBe(true);
+    expect(renamed.circled.has(pathKey(['a', 'x']))).toBe(false);
+    const removed = S.applyEdit(s, setRhs(s.topic!.root, [], 'b + c'));
+    expect(removed.circled.size).toBe(0);
+    expect(S.withTopic(s, mkTopic(mkRoot()), null).circled.size).toBe(0);
+  });
+
+  it('toggleHighlight 切换高亮，无效路径不动，clearHighlights 清空', () => {
+    let s = S.withTopic(S.initialAppState, mkTopic(mkRoot()), null);
+    s = S.toggleHighlight(s, ['a']);
+    expect(s.highlighted.has(pathKey(['a']))).toBe(true);
+    expect(S.toggleHighlight(s, ['zzz'])).toBe(s);
+    s = S.toggleHighlight(s, ['a']);
+    expect(s.highlighted.size).toBe(0);
+    s = S.clearHighlights(S.toggleHighlight(s, ['a', 'x']));
+    expect(s.highlighted.size).toBe(0);
+  });
+
+  it('高亮随改名重映射，词被删后不再保留，切主题时清空', () => {
+    let s = S.withTopic(S.initialAppState, mkTopic(mkRoot()), null);
+    s = S.toggleHighlight(s, ['a', 'x']);
+    const renamed = S.applyEdit(s, setRhs(s.topic!.root, [], 'a2 + b'));
+    expect(renamed.highlighted.has(pathKey(['a2', 'x']))).toBe(true);
+    expect(renamed.highlighted.has(pathKey(['a', 'x']))).toBe(false);
+    const removed = S.applyEdit(s, setRhs(s.topic!.root, [], 'b + c'));
+    expect(removed.highlighted.size).toBe(0);
+    expect(S.withTopic(s, mkTopic(mkRoot()), null).highlighted.size).toBe(0);
+  });
 });
 
 describe('router', () => {

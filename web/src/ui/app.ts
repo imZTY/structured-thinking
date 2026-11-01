@@ -16,6 +16,8 @@ import { parseExpr } from '../core/formula';
 import { renderDerive, type EditingState } from './derive';
 import { renderInspector } from './inspector';
 import { Tabs, toast } from './panels';
+import { applyAnnotations } from './annotations';
+import { exportAsImage } from './exportImage';
 import { applyMode, loadMode } from './theme';
 import { btn, el } from './dom';
 
@@ -58,6 +60,10 @@ export class App {
   private modeBtns!: Record<Mode, HTMLButtonElement>;
   private undoBtn!: HTMLButtonElement;
   private redoBtn!: HTMLButtonElement;
+  private exportBtn!: HTMLButtonElement;
+  private clearCirclesBtn!: HTMLButtonElement;
+  private clearHighlightsBtn!: HTMLButtonElement;
+  private exporting = false;
 
   constructor(private host: HTMLElement) {
     applyMode(this.state.mode);
@@ -133,6 +139,14 @@ export class App {
 
   private bindGlobalEvents() {
     window.addEventListener('hashchange', () => void this.onHashChange());
+
+    // 红圈依赖排版：窗口尺寸、字体加载都会改变换行，要重画
+    let resizeRaf = 0;
+    window.addEventListener('resize', () => {
+      cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => this.drawAnnotations());
+    });
+    void document.fonts?.ready.then(() => this.drawAnnotations());
 
     window.addEventListener('keydown', (e) => {
       const t = e.target as HTMLElement | null;
@@ -212,6 +226,8 @@ export class App {
       prev.topic?.id !== s.topic?.id ||
       prev.topic?.root !== s.topic?.root ||
       prev.selected !== s.selected ||
+      prev.circled !== s.circled ||
+      prev.highlighted !== s.highlighted ||
       prev.mode !== s.mode;
     if (changed && !this.keepInspector) this.renderInspectorPane(s);
     this.keepInspector = false;
@@ -229,6 +245,9 @@ export class App {
     }
     this.undoBtn.disabled = !this.editable || this.undoStack.length === 0;
     this.redoBtn.disabled = !this.editable || this.redoStack.length === 0;
+    this.exportBtn.disabled = !s.topic || this.exporting;
+    this.clearCirclesBtn.hidden = s.circled.size === 0;
+    this.clearHighlightsBtn.hidden = s.highlighted.size === 0;
     this.tabs.render(s.manifest, s.topic?.id ?? null, this.editable, {
       onSelect: (id) => {
         if (id !== this.state.topic?.id) void this.openTopic(id, [], 'push');
@@ -265,9 +284,8 @@ export class App {
       inner.appendChild(
         renderDerive({
           root: s.topic.root,
-          expanded: s.expanded,
+          view: S.viewOf(s),
           selected: s.selected,
-          mode: s.mode,
           canEditFormula: this.canEditFormula(),
           editing: this.editing,
           on: {
@@ -301,8 +319,12 @@ export class App {
         selected: s.selected,
         mode: s.mode,
         editable: this.editable,
+        circled: s.selected !== null && s.circled.has(M.pathKey(s.selected)),
+        highlighted: s.selected !== null && s.highlighted.has(M.pathKey(s.selected)),
         on: {
           select: (p) => this.update(S.select(this.state, p)),
+          toggleCircle: (p) => this.update(S.toggleCircle(this.state, p)),
+          toggleHighlight: (p) => this.update(S.toggleHighlight(this.state, p)),
           jump: (p) => this.jump(p),
           expandAsFormula: (p) => this.beginFormula(p),
           removeFormula: (p) => void this.apply(M.removeFormula(this.rootNode(), p), 'cognition'),
@@ -322,7 +344,13 @@ export class App {
     this.inspEl.scrollTop = scroll;
   }
 
+  private drawAnnotations() {
+    const inner = this.deriveEl.querySelector<HTMLElement>('.derive__inner');
+    if (inner) applyAnnotations(inner, this.state);
+  }
+
   private afterRender() {
+    this.drawAnnotations();
     const p = this.pending;
     this.pending = null;
     if (!p) return;
@@ -555,6 +583,28 @@ export class App {
     }
   }
 
+  private async exportImage() {
+    const s = this.state;
+    if (!s.topic || this.exporting) return;
+    this.flush();
+    this.exporting = true;
+    this.exportBtn.disabled = true;
+    try {
+      const inner = this.deriveEl.querySelector<HTMLElement>('.derive__inner');
+      const name = await exportAsImage({
+        topic: s.topic,
+        view: S.viewOf(s),
+        width: inner?.clientWidth ?? 980,
+      });
+      toast(`已导出 ${name}`);
+    } catch (e) {
+      toast(`导出失败：${msgOf(e)}`, 'error');
+    } finally {
+      this.exporting = false;
+      this.exportBtn.disabled = !this.state.topic;
+    }
+  }
+
   private setMode(mode: Mode) {
     if (mode === this.state.mode) return;
     this.flush();
@@ -590,7 +640,11 @@ export class App {
     }
     depth.appendChild(btn('btn btn--icon', '收起', '只留根公式', () => this.update(S.collapseAll(this.state))));
 
-    bar.append(seg, hist, depth, this.statusEl);
+    this.clearCirclesBtn = btn('btn', '清除圈选', '清除画面上所有红圈', () => this.update(S.clearCircles(this.state)));
+    this.clearHighlightsBtn = btn('btn', '清除高亮', '清除画面上所有高亮标注', () => this.update(S.clearHighlights(this.state)));
+    this.exportBtn = btn('btn', '导出图片', '把当前展开的推导导出为 PNG', () => void this.exportImage());
+
+    bar.append(seg, hist, depth, this.clearCirclesBtn, this.clearHighlightsBtn, this.exportBtn, this.statusEl);
     return bar;
   }
 

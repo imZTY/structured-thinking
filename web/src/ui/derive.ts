@@ -5,7 +5,8 @@
  *   词的下划线语义：粗实线 = 已展开；点线 = 有公式但收起；无线 = 还没有公式
  */
 
-import type { Mode, Path, TermNode } from '../core/types';
+import type { Path, TermNode } from '../core/types';
+import type { ViewState } from '../core/appState';
 import { displayOp, parseExpr } from '../core/formula';
 import { getNode, pathKey } from '../core/model';
 import { btn, el } from './dom';
@@ -17,9 +18,8 @@ export interface EditingState {
 
 export interface DeriveCtx {
   root: TermNode;
-  expanded: Set<string>;
+  view: ViewState;
   selected: Path | null;
-  mode: Mode;
   /** 认知模式且可写：才显示公式编辑入口 */
   canEditFormula: boolean;
   editing: EditingState | null;
@@ -82,7 +82,7 @@ function formulaBlock(ctx: DeriveCtx, node: TermNode, path: Path): HTMLElement {
   for (const t of parsed.terms) {
     const child = node.terms?.[t];
     const childPath = [...path, t];
-    if (child?.expr && ctx.expanded.has(pathKey(childPath))) kids.appendChild(formulaBlock(ctx, child, childPath));
+    if (child?.expr && ctx.view.expanded.has(pathKey(childPath))) kids.appendChild(formulaBlock(ctx, child, childPath));
   }
   if (kids.childElementCount) block.appendChild(kids);
   return block;
@@ -98,7 +98,7 @@ function termButton(ctx: DeriveCtx, path: Path, text: string, isLhs: boolean): H
   const key = pathKey(path);
   const node = getNode(ctx.root, path);
   const hasFormula = !!node?.expr;
-  const open = hasFormula && (path.length === 0 || ctx.expanded.has(key));
+  const open = hasFormula && (path.length === 0 || ctx.view.expanded.has(key));
 
   const b = el('button', 'term', text);
   b.type = 'button';
@@ -107,10 +107,11 @@ function termButton(ctx: DeriveCtx, path: Path, text: string, isLhs: boolean): H
   if (hasFormula && !open) b.classList.add('term--has');
   if (open && !isLhs) b.classList.add('term--open');
   if (ctx.selected && pathKey(ctx.selected) === key) b.classList.add('term--sel');
+  if (ctx.view.highlighted.has(key)) b.classList.add('term--hl');
   if (hasFormula && path.length > 0) b.setAttribute('aria-expanded', String(open));
 
   const n = node?.actions?.length ?? 0;
-  if (ctx.mode === 'action' && n > 0 && (!isLhs || path.length === 0)) {
+  if (ctx.view.mode === 'action' && n > 0 && (!isLhs || path.length === 0)) {
     b.appendChild(el('span', 'term__n', String(n)));
     b.setAttribute('aria-label', `${text}，${n} 条行动`);
   }
